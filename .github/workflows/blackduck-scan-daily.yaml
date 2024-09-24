@@ -58,3 +58,7 @@ jobs:
             echo "EXTRA_ARGS=--detect.project.version.phase=DEVELOPMENT" >> $GITHUB_ENV
           elif [[ "${{ matrix.branch }}" == release/* ]]; then
             echo "EXTRA_ARGS=--detect.project.version.phase=PRERELEASE" >> $GITHUB_ENV
+          else
+            echo "EXTRA_ARGS=--detect.project.version.phase=UNKNOWN" >> $GITHUB_ENV
+          fi
+          
