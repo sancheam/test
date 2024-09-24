@@ -1,0 +1,60 @@
+name: BlackDuck Full Scan Daily
+
+on:
+  workflow_dispatch:
+  # Trigger the workflow at 1:00 PM Malaysia time (5:00 AM UTC)
+  schedule:
+    - cron: '0 5 * * *'
+
+jobs:
+  blackduck-scan-gha:
+    name: blackduck-full-scan-daily
+    runs-on: [self-hosted]
+
+    outputs:
+      branch_matrix: ${{ steps.set_branch.outputs.branch_matrix }}
+
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v3
+
+      - name: Fetch all branches
+        id: fetch_branches
+        run: |
+          git fetch --all
+          BRANCHES=$(git branch -r | grep "origin/release/" | sed 's/origin\///')
+          echo "RELEASE_BRANCHES=$(echo $BRANCHES | tr '\n' ' ')" >> $GITHUB_ENV
+
+      - name: Define matrix branches
+        id: set_branch
+        run: |
+          if [ -z "$RELEASE_BRANCHES" ]; then
+            echo '["main", "develop"]' > branch_matrix.json
+          else
+            RELEASE_BRANCHES_JSON=$(echo $RELEASE_BRANCHES | sed 's/ /", "/g')
+            echo '["main", "develop", "'$RELEASE_BRANCHES_JSON'"]' > branch_matrix.json
+          fi
+          # Write to GITHUB_OUTPUT instead of using set-output
+          cat branch_matrix.json
+          echo "branch_matrix=$(cat branch_matrix.json)" >> $GITHUB_OUTPUT
+
+  blackduck-scan-per-branch:
+    needs: blackduck-scan-gha
+    runs-on: [self-hosted]
+    strategy:
+      matrix:
+        branch: ${{ fromJson(needs.blackduck-scan-gha.outputs.branch_matrix) }}
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          ref: ${{ matrix.branch }}
+
+      - name: Set Extra Args
+        run: |
+          if [[ "${{ matrix.branch }}" == "main" ]]; then
+            echo "EXTRA_ARGS=--detect.project.version.phase=RELEASED" >> $GITHUB_ENV
+          elif [[ "${{ matrix.branch }}" == "develop" ]]; then
+            echo "EXTRA_ARGS=--detect.project.version.phase=DEVELOPMENT" >> $GITHUB_ENV
+          elif [[ "${{ matrix.branch }}" == release/* ]]; then
+            echo "EXTRA_ARGS=--detect.project.version.phase=PRERELEASE" >> $GITHUB_ENV
