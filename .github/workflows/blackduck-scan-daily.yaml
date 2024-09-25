@@ -52,15 +52,22 @@ jobs:
 
       - name: Set Extra Args
         run: |
+          # Debug: Print the matrix.branch to verify its value
+          echo "Matrix branch is: ${{ matrix.branch }}"
+
           if [[ "${{ matrix.branch }}" == "main" ]]; then
-            echo "EXTRA_ARGS=--detect.project.version.phase=RELEASED" >> $GITHUB_ENV
+            EXTRA_ARGS="--detect.project.version.phase=RELEASED"
           elif [[ "${{ matrix.branch }}" == "develop" ]]; then
-            echo "EXTRA_ARGS=--detect.project.version.phase=DEVELOPMENT" >> $GITHUB_ENV
+            EXTRA_ARGS="--detect.project.version.phase=DEVELOPMENT"
           elif [[ "${{ matrix.branch }}" == release/* ]]; then
-            echo "EXTRA_ARGS=--detect.project.version.phase=PRERELEASE" >> $GITHUB_ENV
+            EXTRA_ARGS="--detect.project.version.phase=PRERELEASE"
           else
-            echo "EXTRA_ARGS=--detect.project.version.phase=UNKNOWN" >> $GITHUB_ENV
+            EXTRA_ARGS="--detect.project.version.phase=UNKNOWN"
           fi
+
+          # Set the EXTRA_ARGS in the environment for future steps
           echo "EXTRA_ARGS=$EXTRA_ARGS" >> $GITHUB_ENV
+          
+          # Print the value for debugging
           echo "EXTRA_ARGS value is: $EXTRA_ARGS"
           
