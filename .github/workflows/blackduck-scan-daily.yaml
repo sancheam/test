@@ -16,8 +16,8 @@ jobs:
 
     steps:
       - name: Checkout the repository
-        uses: actions/checkout@v3
-
+        uses: actions/checkout@v4
+        
       - name: Fetch all branches
         id: fetch_branches
         run: |
@@ -46,13 +46,19 @@ jobs:
         branch: ${{ fromJson(needs.blackduck-scan-gha.outputs.branch_matrix) }}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
         with:
           ref: ${{ matrix.branch }}
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: make mvnw executable
+        run: chmod +x mvnw
 
       - name: Set Extra Args
         run: |
-          # Debug: Print the matrix.branch to verify its value
           echo "Matrix branch is: ${{ matrix.branch }}"
 
           if [[ "${{ matrix.branch }}" == "main" ]]; then
@@ -64,10 +70,7 @@ jobs:
           else
             EXTRA_ARGS="--detect.project.version.phase=UNKNOWN"
           fi
+          EXTRA_ARGS="$EXTRA_ARGS --detect.maven.build.command=\"--settings mvn/settings.xml\""
 
-          # Set the EXTRA_ARGS in the environment for future steps
           echo "EXTRA_ARGS=$EXTRA_ARGS" >> $GITHUB_ENV
-          
-          # Print the value for debugging
           echo "EXTRA_ARGS value is: $EXTRA_ARGS"
-          
