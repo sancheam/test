@@ -7,7 +7,7 @@ on:
     - cron: '0 5 * * *'
 
 jobs:
-  blackduck-scan-gha:
+  security-scan:
     name: blackduck-full-scan-daily
     runs-on: [self-hosted]
 
@@ -17,7 +17,7 @@ jobs:
     steps:
       - name: Checkout the repository
         uses: actions/checkout@v4
-        
+
       - name: Fetch all branches
         id: fetch_branches
         run: |
@@ -38,24 +38,15 @@ jobs:
           cat branch_matrix.json
           echo "branch_matrix=$(cat branch_matrix.json)" >> $GITHUB_OUTPUT
 
-  blackduck-scan-per-branch:
-    needs: blackduck-scan-gha
+  security-scan-per-branch:
+    needs: security-scan
     runs-on: [self-hosted]
     strategy:
       matrix:
-        branch: ${{ fromJson(needs.blackduck-scan-gha.outputs.branch_matrix) }}
+        branch: ${{ fromJson(needs.security-scan.outputs.branch_matrix) }}
 
     steps:
       - uses: actions/checkout@v4
-
-      - uses: actions/setup-java@v4
-        with:
-          ref: ${{ matrix.branch }}
-          distribution: 'temurin'
-          java-version: '17'
-
-      - name: make mvnw executable
-        run: chmod +x mvnw
 
       - name: Set Extra Args
         run: |
@@ -70,7 +61,12 @@ jobs:
           else
             EXTRA_ARGS="--detect.project.version.phase=UNKNOWN"
           fi
-          EXTRA_ARGS="$EXTRA_ARGS --detect.maven.build.command=\"--settings mvn/settings.xml\""
 
           echo "EXTRA_ARGS=$EXTRA_ARGS" >> $GITHUB_ENV
           echo "EXTRA_ARGS value is: $EXTRA_ARGS"
+
+      - uses: sip-shared-libraries/blackduck-scan-gha@v1.11.0
+        with:
+          api-token: ${{ secrets.BLACKDUCK_TOKEN }}
+          project-name: 'VSM_STM_API'
+          extra-args: ${{ env.EXTRA_ARGS }}
