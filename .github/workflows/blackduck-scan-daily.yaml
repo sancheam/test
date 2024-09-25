@@ -61,5 +61,6 @@ jobs:
           else
             echo "EXTRA_ARGS=--detect.project.version.phase=UNKNOWN" >> $GITHUB_ENV
           fi
+          echo "EXTRA_ARGS=$EXTRA_ARGS" >> $GITHUB_ENV
           echo "EXTRA_ARGS value is: $EXTRA_ARGS"
           
