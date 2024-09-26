@@ -46,7 +46,7 @@ jobs:
     secrets: inherit
     with:
       git_branch: ${{ matrix.branch }} 
-      service_name: vsm-stock-api
+      service_name: vsm-stock-api-123321
       sonar_branch: |
         ${{ github.event.inputs.sonar_branch || (matrix.branch == 'main' && 'main') || (matrix.branch == 'develop' && 'develop') || (startsWith(matrix.branch, 'release/') && 'release') || 'develop' }}
       blackduck_project_name: VSM_STM_API
