@@ -37,20 +37,49 @@ jobs:
           cat branch_matrix.json
           echo "branch_matrix=$(cat branch_matrix.json)" >> $GITHUB_OUTPUT
 
-  # Call reusable workflow based on the branch matrix
+      - name: Set Branch Variables
+        id: set_branch_variables
+        run: |
+          if [[ "${{ matrix.branch }}" == "main" ]]; then
+            echo "SONAR_BRANCH=main" >> $GITHUB_ENV
+            echo "BLACKDUCK_PHASE=RELEASED" >> $GITHUB_ENV
+            echo "BLACKDUCK_PROJECT_VERSION=RELEASED" >> $GITHUB_ENV
+            echo "SECHUB_BRANCH=main" >> $GITHUB_ENV
+          elif [[ "${{ matrix.branch }}" == "develop" ]]; then
+            echo "SONAR_BRANCH=develop" >> $GITHUB_ENV
+            echo "BLACKDUCK_PHASE=DEVELOPMENT" >> $GITHUB_ENV
+            echo "BLACKDUCK_PROJECT_VERSION=DEVELOPMENT" >> $GITHUB_ENV
+            echo "SECHUB_BRANCH=develop" >> $GITHUB_ENV
+          elif [[ "${{ matrix.branch }}" == release/* ]]; then
+            echo "SONAR_BRANCH=release" >> $GITHUB_ENV
+            echo "BLACKDUCK_PHASE=PRERELEASE" >> $GITHUB_ENV
+            echo "BLACKDUCK_PROJECT_VERSION=PRERELEASE" >> $GITHUB_ENV
+            echo "SECHUB_BRANCH=release" >> $GITHUB_ENV
+          else
+            echo "SONAR_BRANCH=develop" >> $GITHUB_ENV
+            echo "BLACKDUCK_PHASE=DEVELOPMENT" >> $GITHUB_ENV
+            echo "BLACKDUCK_PROJECT_VERSION=DEVELOPMENT" >> $GITHUB_ENV
+            echo "SECHUB_BRANCH=develop" >> $GITHUB_ENV
+          fi
+
   security-scan-per-branch:
     needs: fetch-branches
     strategy:
       matrix:
         branch: ${{ fromJson(needs.fetch-branches.outputs.branch_matrix) }}
     runs-on: [self-hosted]
-    uses: sancheam/reusable-workflow/.github/workflows/maven-test-with-security-scanning.yml@main
-    secrets: inherit
-    with:
-      git_branch: ${{ matrix.branch }}
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v4
 
-      sonar_branch: ${{ matrix.branch == 'main' ? 'main' : (matrix.branch == 'develop' ? 'develop' : (startsWith(matrix.branch, 'release') ? 'release' : 'develop')) }}
-      blackduck_phase: ${{ matrix.branch == 'main' ? 'RELEASED' : (matrix.branch == 'develop' ? 'DEVELOPMENT' : (startsWith(matrix.branch, 'release') ? 'PRERELEASE' : 'DEVELOPMENT')) }}
-      blackduck_project_version: ${{ matrix.branch == 'main' ? 'RELEASED' : (matrix.branch == 'develop' ? 'DEVELOPMENT' : (startsWith(matrix.branch, 'release') ? 'PRERELEASE' : 'DEVELOPMENT')) }}
-      sechub_branch: ${{ matrix.branch == 'main' ? 'main' : (matrix.branch == 'develop' ? 'develop' : (startsWith(matrix.branch, 'release') ? 'release' : 'develop')) }}
-      setup_local_database: 'true'
+      # Call the reusable workflow, referencing the environment variables set in the previous step
+      - name: Maven Test with Security Scanning
+        uses: sancheam/reusable-workflow/.github/workflows/maven-test-with-security-scanning.yml@main
+        secrets: inherit
+        with:
+          git_branch: ${{ matrix.branch }}
+          sonar_branch: ${{ env.SONAR_BRANCH }}
+          blackduck_phase: ${{ env.BLACKDUCK_PHASE }}
+          blackduck_project_version: ${{ env.BLACKDUCK_PROJECT_VERSION }}
+          sechub_branch: ${{ env.SECHUB_BRANCH }}
+          setup_local_database: 'true'
