@@ -63,23 +63,14 @@ jobs:
           fi
 
   security-scan-per-branch:
+    name: Maven Test with Security Scanning
     needs: fetch-branches
-    strategy:
-      matrix:
-        branch: ${{ fromJson(needs.fetch-branches.outputs.branch_matrix) }}
-    runs-on: [self-hosted]
-    steps:
-      - name: Checkout the repository
-        uses: actions/checkout@v4
-
-      # Call the reusable workflow, referencing the environment variables set in the previous step
-      - name: Maven Test with Security Scanning
-        uses: sancheam/reusable-workflow/.github/workflows/maven-test-with-security-scanning.yml@main
-        secrets: inherit
-        with:
-          git_branch: ${{ matrix.branch }}
-          sonar_branch: ${{ env.SONAR_BRANCH }}
-          blackduck_phase: ${{ env.BLACKDUCK_PHASE }}
-          blackduck_project_version: ${{ env.BLACKDUCK_PROJECT_VERSION }}
-          sechub_branch: ${{ env.SECHUB_BRANCH }}
-          setup_local_database: 'true'
+    uses: sancheam/reusable-workflow/.github/workflows/maven-test-with-security-scanning.yml@main
+    secrets: inherit
+    with:
+      git_branch: ${{ matrix.branch }}
+      sonar_branch: ${{ needs.set-variables.outputs.sonar_branch }}
+      blackduck_phase: ${{ needs.set-variables.outputs.blackduck_phase }}
+      blackduck_project_version: ${{ needs.set-variables.outputs.blackduck_project_version }}
+      sechub_branch: ${{ needs.set-variables.outputs.sechub_branch }}
+      setup_local_database: 'true'
