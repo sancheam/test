@@ -42,13 +42,19 @@ jobs:
     strategy:
       matrix:
         branch: ${{ fromJson(needs.fetch-branches.outputs.branch_matrix) }}
-    runs-on: [self-hosted]
     uses: sancheam/reusable-workflow/.github/workflows/maven-test-with-security-scanning.yml@main
     secrets: inherit
     with:
-      git_branch: ${{ matrix.branch }}
-      sonar_branch: ${{ matrix.branch == 'main' ? 'main' : (matrix.branch == 'develop' ? 'develop' : (startsWith(matrix.branch, 'release') ? 'release' : 'develop')) }}
-      blackduck_phase: ${{ matrix.branch == 'main' ? 'RELEASED' : (matrix.branch == 'develop' ? 'DEVELOPMENT' : (startsWith(matrix.branch, 'release') ? 'PRERELEASE' : 'DEVELOPMENT')) }}
-      blackduck_project_version: ${{ matrix.branch == 'main' ? 'RELEASED' : (matrix.branch == 'develop' ? 'DEVELOPMENT' : (startsWith(matrix.branch, 'release') ? 'PRERELEASE' : 'DEVELOPMENT')) }}
-      sechub_branch: ${{ matrix.branch == 'main' ? 'main' : (matrix.branch == 'develop' ? 'develop' : (startsWith(matrix.branch, 'release') ? 'release' : 'develop')) }}
+      git_branch: ${{ matrix.branch }} 
+      service_name: vsm-stock-api
+      sonar_branch: |
+        ${{ github.event.inputs.sonar_branch || (matrix.branch == 'main' && 'main') || (matrix.branch == 'develop' && 'develop') || 'release' }}
+      blackduck_project_name: VSM_STM_API
+      blackduck_rapid_scan: 'false'
+      blackduck_phase: |
+        ${{ github.event.inputs.blackduck_phase || (matrix.branch == 'main' && 'RELEASED') || (matrix.branch == 'develop' && 'DEVELOPMENT') || 'PRERELEASE' }}
+      blackduck_project_version: |
+        ${{ github.event.inputs.blackduck_phase || (matrix.branch == 'main' && 'RELEASED') || (matrix.branch == 'develop' && 'DEVELOPMENT') || 'PRERELEASE' }}
       setup_local_database: 'true'
+      sechub_branch: |
+        ${{ github.event.inputs.sechub_branch || (matrix.branch == 'main' && 'main') || (matrix.branch == 'develop' && 'develop') || 'release' }}
