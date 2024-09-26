@@ -42,7 +42,7 @@ jobs:
     strategy:
       matrix:
         branch: ${{ fromJson(needs.fetch-branches.outputs.branch_matrix) }}
-    uses: ms-vsm/reusable-workflow/.github/workflows/maven-test-with-security-scanning.yml@main
+    uses: sancheam/reusable-workflow/.github/workflows/maven-test-with-security-scanning.yml@main
     secrets: inherit
     with:
       git_branch: ${{ matrix.branch }}  # Pass the current matrix branch
