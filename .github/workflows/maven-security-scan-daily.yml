@@ -39,24 +39,29 @@ jobs:
 
   security-scan-per-branch:
     needs: fetch-branches
+    runs-on: [ self-hosted ]
     strategy:
       matrix:
         branch: ${{ fromJson(needs.fetch-branches.outputs.branch_matrix) }}
-    uses: sancheam/reusable-workflow/.github/workflows/maven-test-with-security-scanning.yml@main
+    uses: ms-vsm/reusable-workflow/.github/workflows/maven-test-with-security-scanning.yml@main
     secrets: inherit
     with:
-      git_branch: ${{ matrix.branch }}  # Pass the current matrix branch
-      service_name: vsm-stock-api
+      git_branch: ${{ matrix.branch }}
       sonar_branch: |
-        ${{ github.event.inputs.sonar_branch || (matrix.branch == 'main' && 'main') || (matrix.branch == 'develop' && 'develop') || 'release' }}
-      blackduck_project_name: VSM_STM_API
-      blackduck_rapid_scan: 'false'
+        ${{ matrix.branch == 'main' && 'main' || matrix.branch == 'develop' && 'develop' || matrix.branch.startsWith('release') && 'release' || 'develop' }}
       blackduck_phase: |
-        ${{ github.event.inputs.blackduck_phase || (matrix.branch == 'main' && 'RELEASED') || (matrix.branch == 'develop' && 'DEVELOPMENT') || 'PRERELEASE' }}
+        ${{ matrix.branch == 'main' && 'RELEASED' || matrix.branch == 'develop' && 'DEVELOPMENT' || matrix.branch.startsWith('release') && 'PRERELEASE' || 'DEVELOPMENT' }}
       blackduck_project_version: |
-        ${{ github.event.inputs.blackduck_phase || (matrix.branch == 'main' && 'RELEASED') || (matrix.branch == 'develop' && 'DEVELOPMENT') || 'PRERELEASE' }}
-      setup_local_database: 'true'
+        ${{ matrix.branch == 'main' && 'RELEASED' || matrix.branch == 'develop' && 'DEVELOPMENT' || matrix.branch.startsWith('release') && 'PRERELEASE' || 'DEVELOPMENT' }}
       sechub_branch: |
-        ${{ github.event.inputs.sechub_branch || (matrix.branch == 'main' && 'main') || (matrix.branch == 'develop' && 'develop') || 'release' }}
+        ${{ matrix.branch == 'main' && 'main' || matrix.branch == 'develop' && 'develop' || matrix.branch.startsWith('release') && 'release' || 'develop' }}
+      setup_local_database: 'true'
 
-    
+      post_steps:
+        - name: Print Debug Info
+          run: |
+            echo "git_branch: ${{ matrix.branch }}"
+            echo "sonar_branch: ${{ env.sonar_branch }}"
+            echo "blackduck_phase: ${{ env.blackduck_phase }}"
+            echo "blackduck_project_version: ${{ env.blackduck_project_version }}"
+            echo "sechub_branch: ${{ env.sechub_branch }}"
