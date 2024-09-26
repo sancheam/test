@@ -7,12 +7,9 @@ on:
     - cron: '0 23 * * *'
 
 jobs:
-  fetch-branches:
-    name: Fetch Branches for Security Scan
+  fetch-and-set-variables:
+    name: Fetch Branches and Set Variables
     runs-on: [self-hosted]
-
-    outputs:
-      branch_matrix: ${{ steps.set_branch.outputs.branch_matrix }}
 
     steps:
       - name: Checkout the repository
@@ -35,10 +32,10 @@ jobs:
             echo '["main", "develop", "'$RELEASE_BRANCHES_JSON'"]' > branch_matrix.json
           fi
           cat branch_matrix.json
-          echo "branch_matrix=$(cat branch_matrix.json)" >> $GITHUB_OUTPUT
+          echo "branch_matrix=$(cat branch_matrix.json)" >> $GITHUB_ENV
 
       - name: Set Branch Variables
-        id: set_branch_variables
+        id: set_vars
         run: |
           if [[ "${{ matrix.branch }}" == "main" ]]; then
             echo "SONAR_BRANCH=main" >> $GITHUB_ENV
@@ -60,17 +57,18 @@ jobs:
             echo "BLACKDUCK_PHASE=DEVELOPMENT" >> $GITHUB_ENV
             echo "BLACKDUCK_PROJECT_VERSION=DEVELOPMENT" >> $GITHUB_ENV
             echo "SECHUB_BRANCH=develop" >> $GITHUB_ENV
-          fi
 
   security-scan-per-branch:
-    name: Maven Test with Security Scanning
-    needs: fetch-branches
+    needs: fetch-and-set-variables
+    strategy:
+      matrix:
+        branch: ${{ fromJson(env.branch_matrix) }}
     uses: sancheam/reusable-workflow/.github/workflows/maven-test-with-security-scanning.yml@main
     secrets: inherit
     with:
       git_branch: ${{ matrix.branch }}
-      sonar_branch: ${{ needs.set-variables.outputs.sonar_branch }}
-      blackduck_phase: ${{ needs.set-variables.outputs.blackduck_phase }}
-      blackduck_project_version: ${{ needs.set-variables.outputs.blackduck_project_version }}
-      sechub_branch: ${{ needs.set-variables.outputs.sechub_branch }}
+      sonar_branch: ${{ env.SONAR_BRANCH }}
+      blackduck_phase: ${{ env.BLACKDUCK_PHASE }}
+      blackduck_project_version: ${{ env.BLACKDUCK_PROJECT_VERSION }}
+      sechub_branch: ${{ env.SECHUB_BRANCH }}
       setup_local_database: 'true'
