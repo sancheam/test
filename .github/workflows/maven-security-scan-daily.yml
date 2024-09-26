@@ -39,7 +39,6 @@ jobs:
 
   security-scan-per-branch:
     needs: fetch-branches
-    runs-on: [ self-hosted ]
     strategy:
       matrix:
         branch: ${{ fromJson(needs.fetch-branches.outputs.branch_matrix) }}
@@ -56,12 +55,3 @@ jobs:
       sechub_branch: |
         ${{ matrix.branch == 'main' && 'main' || matrix.branch == 'develop' && 'develop' || matrix.branch.startsWith('release') && 'release' || 'develop' }}
       setup_local_database: 'true'
-
-      post_steps:
-        - name: Print Debug Info
-          run: |
-            echo "git_branch: ${{ matrix.branch }}"
-            echo "sonar_branch: ${{ env.sonar_branch }}"
-            echo "blackduck_phase: ${{ env.blackduck_phase }}"
-            echo "blackduck_project_version: ${{ env.blackduck_project_version }}"
-            echo "sechub_branch: ${{ env.sechub_branch }}"
