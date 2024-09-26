@@ -39,52 +39,24 @@ jobs:
 
   security-scan-per-branch:
     needs: fetch-branches
-    runs-on: [self-hosted]
     strategy:
       matrix:
         branch: ${{ fromJson(needs.fetch-branches.outputs.branch_matrix) }}
+    uses: ms-vsm/reusable-workflow/.github/workflows/maven-test-with-security-scanning.yml@main
+    secrets: inherit
+    with:
+      git_branch: ${{ matrix.branch }}  # Pass the current matrix branch
+      service_name: vsm-stock-api
+      sonar_branch: |
+        ${{ github.event.inputs.sonar_branch || (matrix.branch == 'main' && 'main') || (matrix.branch == 'develop' && 'develop') || 'release' }}
+      blackduck_project_name: VSM_STM_API
+      blackduck_rapid_scan: 'false'
+      blackduck_phase: |
+        ${{ github.event.inputs.blackduck_phase || (matrix.branch == 'main' && 'RELEASED') || (matrix.branch == 'develop' && 'DEVELOPMENT') || 'PRERELEASE' }}
+      blackduck_project_version: |
+        ${{ github.event.inputs.blackduck_phase || (matrix.branch == 'main' && 'RELEASED') || (matrix.branch == 'develop' && 'DEVELOPMENT') || 'PRERELEASE' }}
+      setup_local_database: 'true'
+      sechub_branch: |
+        ${{ github.event.inputs.sechub_branch || (matrix.branch == 'main' && 'main') || (matrix.branch == 'develop' && 'develop') || 'release' }}
 
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set BlackDuck Phase
-        run: |
-          echo "Matrix branch is: ${{ matrix.branch }}"
-
-          if [[ "${{ matrix.branch }}" == "main" ]]; then
-            BLACKDUCK_PHASE="RELEASED"
-            SONAR_BRANCH="main"
-            SECHUB_BRANCH="main"
-          elif [[ "${{ matrix.branch }}" == "develop" ]]; then
-            BLACKDUCK_PHASE="DEVELOPMENT"
-            SONAR_BRANCH="develop"
-            SECHUB_BRANCH="develop"
-          elif [[ "${{ matrix.branch }}" == release/* ]]; then
-            BLACKDUCK_PHASE="PRERELEASE"
-            SONAR_BRANCH="release"
-            SECHUB_BRANCH="release"
-          else
-            BLACKDUCK_PHASE="DEVELOPMENT"
-            SONAR_BRANCH="develop"
-            SECHUB_BRANCH="develop"
-          fi
-
-          echo "BLACKDUCK_PHASE=$BLACKDUCK_PHASE" >> $GITHUB_ENV
-          echo "SONAR_BRANCH=$SONAR_BRANCH" >> $GITHUB_ENV
-          echo "SECHUB_BRANCH=$SECHUB_BRANCH" >> $GITHUB_ENV
-          echo "BLACKDUCK_PHASE value is: $BLACKDUCK_PHASE"
-          echo "SONAR_BRANCH value is: $SONAR_BRANCH"
-          echo "SECHUB_BRANCH value is: $SECHUB_BRANCH"
-
-      - name: Maven Test with Security Scanning
-        uses: ms-vsm/reusable-workflow/.github/workflows/maven-test-with-security-scanning.yml@main
-        with:
-          git_branch: ${{ matrix.branch }}
-          service_name: vsm-stock-api
-          sonar_branch: ${{ env.SONAR_BRANCH }}
-          blackduck_project_name: VSM_STM_API
-          blackduck_rapid_scan: 'false'
-          blackduck_phase: ${{ env.BLACKDUCK_PHASE }}
-          blackduck_project_version: ${{ env.BLACKDUCK_PHASE }}
-          setup_local_database: 'true'
-          sechub_branch: ${{ env.SECHUB_BRANCH }}
+    
