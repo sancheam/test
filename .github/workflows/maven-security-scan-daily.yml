@@ -3,8 +3,8 @@ name: Maven Security Scan Daily
 on:
   workflow_dispatch:
   # Trigger the workflow at 00:00:00 of Germany time (runner is UTC time, UTC+2 or UTC+1 depending on daylight saving)
-  schedule:
-    - cron: '0 23 * * *'
+  # schedule:
+  #   - cron: '0 23 * * *'
 
 jobs:
   fetch-branches:
